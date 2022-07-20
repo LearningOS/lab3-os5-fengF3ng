@@ -13,6 +13,7 @@ use core::cell::RefMut;
 /// Task control block structure
 ///
 /// Directly save the contents that will not change during running
+//#[derive(Eq, PartialEq)]
 pub struct TaskControlBlock {
     // immutable
     /// Process identifier
@@ -46,6 +47,9 @@ pub struct TaskControlBlockInner {
     pub children: Vec<Arc<TaskControlBlock>>,
     /// It is set when active exit or execution error occurs
     pub exit_code: i32,
+    /// stride algorithm
+    pub pass: isize,
+    pub prio: isize,
 }
 
 /// Simple access to its internal fields
@@ -103,6 +107,8 @@ impl TaskControlBlock {
                     parent: None,
                     children: Vec::new(),
                     exit_code: 0,
+                    pass: 0,
+                    prio: 16,
                 })
             },
         };
@@ -170,6 +176,8 @@ impl TaskControlBlock {
                     parent: Some(Arc::downgrade(self)),
                     children: Vec::new(),
                     exit_code: 0,
+                    pass: 0,
+                    prio: 16,
                 })
             },
         });
@@ -193,9 +201,39 @@ impl TaskControlBlock {
 
         task_control_block
     }
+    pub fn set_priority(self: &Arc<TaskControlBlock>, prio: isize) {
+        let mut inner = self.inner_exclusive_access();
+        inner.prio = prio;
+    }
 
     pub fn getpid(&self) -> usize {
         self.pid.0
+    }
+}
+
+use core::cmp::Ordering;
+
+impl Eq for TaskControlBlock {
+
+}
+
+impl PartialEq for TaskControlBlock {
+    fn eq(&self, other: &Self) -> bool {
+        self.pid.0 == other.pid.0
+    }
+}
+
+impl Ord for TaskControlBlock {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let lpass = self.inner_exclusive_access().pass;
+        let rpass = other.inner_exclusive_access().pass;
+        rpass.cmp(&lpass)
+    }
+}
+
+impl PartialOrd for TaskControlBlock {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
