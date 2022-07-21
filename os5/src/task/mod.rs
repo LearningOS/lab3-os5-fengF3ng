@@ -44,7 +44,7 @@ pub fn suspend_current_and_run_next() {
     task_inner.task_status = TaskStatus::Ready;
     // update pass
     let prio = task_inner.prio;
-    task_inner.pass += BIG_STRIDE/prio;
+    task_inner.pass += BIG_STRIDE / prio;
 
     drop(task_inner);
     // ---- release current PCB
